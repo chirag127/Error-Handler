@@ -28,7 +28,7 @@ def check_error(error_text):
     return (False, None, None)
 
 # Streamlit app
-st.title("Error Handler")
+st.title("Errorandler")
 
 # Use st.form to group the input fields together
 with st.form("error_form"):

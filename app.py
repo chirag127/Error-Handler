@@ -3,21 +3,8 @@ import sqlite3
 import re
 
 # Establish a connection to the SQLite database
-@st.cache(allow_output_mutation=True)
-def get_database_connection():
-    conn = sqlite3.connect("error_database.db")
-    return conn
-
-@st.cache(allow_output_mutation=True)
-def get_cursor(conn):
-    return conn.cursor()
-
-# Streamlit app
-st.title("Error Handler")
-
-# Get the database connection and cursor
-conn = get_database_connection()
-cursor = get_cursor(conn)
+conn = sqlite3.connect("error_database.db")
+cursor = conn.cursor()
 
 # Create a table if it doesn't exist
 cursor.execute('''
@@ -32,7 +19,6 @@ cursor.execute('''
 conn.commit()
 
 # Function to check if the entered error matches any regex
-@st.cache
 def check_error(error_text):
     cursor.execute("SELECT * FROM errors")
     rows = cursor.fetchall()
@@ -41,10 +27,19 @@ def check_error(error_text):
             return (True, row[3], row[4])
     return (False, None, None)
 
-# User input for error
-user_error = st.text_area("Enter your error message:")
+# Streamlit app
+st.title("Error Handler")
 
-if st.button("Check Error"):
+# Use st.form to group the input fields together
+with st.form("error_form"):
+    # User input for error
+    user_error = st.text_area("Enter your error message:")
+
+    # Submit button to check the error
+    submit_button = st.form_submit_button("Check Error")
+
+# Check the error only when the submit button is clicked
+if submit_button:
     is_known, reason, solution = check_error(user_error)
     if is_known:
         st.success("This is a known error.")
@@ -54,14 +49,18 @@ if st.button("Check Error"):
         st.error("This is a new error.")
         st.write("You can add this error to the database below:")
 
-        # Allow the user to add the error to the database
-        new_error_name = st.text_input("Error Name:", key="error_name")
-        new_error_regex = st.text_input("Error Regex (in a more generalized form):", key="error_regex")
-        new_error_reason = st.text_area("Error Reason:", key="error_reason")
-        new_error_solution = st.text_area("Error Solution:", key="error_solution")
+        # Use st.form to group the input fields for adding a new error
+        with st.form("add_error_form"):
+            new_error_name = st.text_input("Error Name:")
+            new_error_regex = st.text_input("Error Regex (in a more generalized form):")
+            new_error_reason = st.text_area("Error Reason:")
+            new_error_solution = st.text_area("Error Solution:")
 
-        if st.button("Add Error to Database"):
-            cursor = get_cursor(conn)  # Get a new cursor (important for SQLite)
+            # Submit button to add the error to the database
+            add_error_button = st.form_submit_button("Add Error to Database")
+
+        # Add the error to the database only when the submit button is clicked
+        if add_error_button:
             cursor.execute("INSERT INTO errors (name, regex, reason, solution) VALUES (?, ?, ?, ?)",
                            (new_error_name, new_error_regex, new_error_reason, new_error_solution))
             conn.commit()
